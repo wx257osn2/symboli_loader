@@ -1,4 +1,8 @@
 #include<will/_windows.hpp>
+#include<vector>
+#include<fstream>
+#include<filesystem>
+#include<ranges>
 
 static constexpr LPCSTR import_names[] = {
 	"GetFileVersionInfoA",
@@ -38,32 +42,37 @@ struct version_dll_proxy{
 };
 static const version_dll_proxy _proxy = version_dll_proxy::create().value();
 
+static std::vector<will::module_handle> modules;
 
 static inline BOOL process_attach(HINSTANCE hinst, bool is_dynamic_load){
-	return TRUE;
-}
+	const auto process_name = std::filesystem::path{will::get_module_file_name(nullptr).value()}.filename();
+	const auto dll_dir = std::filesystem::path{will::get_module_file_name(hinst).value()}.parent_path();
+	const auto dir_path = dll_dir / "symboli_loader" / process_name;
+	if(!std::filesystem::exists(dir_path) || !std::filesystem::is_directory(dir_path))
+		return TRUE;
+	std::ranges::subrange dir{std::filesystem::directory_iterator{dir_path}, std::filesystem::directory_iterator{}};
 
-static inline BOOL thread_attach(HINSTANCE hinst){
-	return TRUE;
-}
-
-static inline BOOL thread_detach(HINSTANCE hinst){
+	for(auto&& x : dir)
+		if(!x.is_directory() && x.path().extension() == ".symboli")
+			modules.emplace_back(will::load_library(will::tchar::to_tstring(x.path())).value());
 	return TRUE;
 }
 
 static inline BOOL process_detach(HINSTANCE hinst, bool process_terminating){
+	modules.clear();
 	return TRUE;
 }
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)try{
 	switch(fdwReason){
 	case DLL_PROCESS_ATTACH:
 		return process_attach(hinstDLL, lpvReserved == nullptr);
-	case DLL_THREAD_ATTACH:
-		return thread_attach(hinstDLL);
-	case DLL_THREAD_DETACH:
-		return thread_detach(hinstDLL);
 	case DLL_PROCESS_DETACH:
 		return process_detach(hinstDLL, lpvReserved != nullptr);
+	default:
+		return TRUE;
 	}
+}catch(std::exception& e){
+	::MessageBoxA(nullptr, e.what(), "Symboli Loader exception", MB_OK|MB_ICONERROR|MB_SETFOREGROUND);
+	return FALSE;
 }
