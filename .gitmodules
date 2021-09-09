@@ -1,0 +1,3 @@
+[submodule ".dependencies/will/include/will"]
+	path = .dependencies/will/include/will
+	url = https://github.com/wx257osn2/will
