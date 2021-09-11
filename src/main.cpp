@@ -31,7 +31,7 @@ struct version_dll_proxy{
 		return will::load_library((str+_T("\\version.dll")).c_str()).bind([](will::module_handle&& mod)->will::expected<version_dll_proxy, will::winapi_last_error>{
 			constexpr std::size_t size = sizeof(import_names)/sizeof(LPCSTR);
 			for(std::size_t i = 0; i < size; ++i){
-				auto addr = mod.get_proc_address<void>(import_names[i]);
+				const auto addr = mod.get_proc_address<void>(import_names[i]);
 				if(!addr)
 					return will::make_unexpected(addr.error());
 				version_dll_proxy_original_procs[i] = *addr;
@@ -50,8 +50,7 @@ static inline BOOL process_attach(HINSTANCE hinst, bool is_dynamic_load){
 	const auto dir_path = dll_dir / "symboli_loader" / process_name;
 	if(!std::filesystem::exists(dir_path) || !std::filesystem::is_directory(dir_path))
 		return TRUE;
-	std::ranges::subrange dir{std::filesystem::directory_iterator{dir_path}, std::filesystem::directory_iterator{}};
-
+	const std::ranges::subrange dir{std::filesystem::directory_iterator{dir_path}, std::filesystem::directory_iterator{}};
 	for(auto&& x : dir)
 		if(!x.is_directory() && x.path().extension() == ".symboli")
 			modules.emplace_back(will::load_library(will::tchar::to_tstring(x.path())).value());
