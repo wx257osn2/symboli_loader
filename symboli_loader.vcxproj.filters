@@ -17,7 +17,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="src\version_proxy.asm">
+    <MASM Include="src\version_proxy32.asm">
+      <Filter>Sources</Filter>
+    </MASM>
+    <MASM Include="src\version_proxy64.asm">
       <Filter>Sources</Filter>
     </MASM>
   </ItemGroup>
